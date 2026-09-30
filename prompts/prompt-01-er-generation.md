@@ -92,3 +92,70 @@ ORDER ||--o{ ORDER_ITEM : "contains"
 BOOK ||--o{ ORDER_ITEM : "included_in"
 BOOK ||--o{ REVIEW : "has"
 ```
+## Prompt 2
+> Нормально в цілому, але треба виправити типи ключів. Ти вказав UUID як тип поля, а за вимогами має бути концептуальний string і вже після PK/FK писати "UUID" у лапках
+>
+> Поправ Mermaid-код:
+> - Усі UUID id PK зміни на string id PK "UUID"
+> - Усі зовнішні ключі (як-от UUID category_id FK) зміни на string category_id FK "UUID"
+> - Інші поля залиш тільки з типами string або number
+## Друга віжповідь АІ
+```
+erDiagram
+    USER {
+        string id PK "UUID"
+        string email
+        string name
+        string role
+    }
+
+    AUTHOR {
+        string id PK "UUID"
+        string name
+        string bio
+    }
+
+    CATEGORY {
+        string id PK "UUID"
+        string name
+    }
+
+    BOOK {
+        string id PK "UUID"
+        string title
+        string isbn
+        number price
+        string category_id FK "UUID"
+    }
+
+    ORDER {
+        string id PK "UUID"
+        string user_id FK "UUID"
+        string status
+        number total_amount
+    }
+
+    ORDER_ITEM {
+        string id PK "UUID"
+        string order_id FK "UUID"
+        string book_id FK "UUID"
+        number quantity
+        number unit_price
+    }
+
+    REVIEW {
+        string id PK "UUID"
+        string user_id FK "UUID"
+        string book_id FK "UUID"
+        number rating
+        string comment
+    }
+
+    USER ||--o{ ORDER : "creates"
+    USER ||--o{ REVIEW : "leaves"
+    CATEGORY ||--o{ BOOK : "contains"
+    BOOK }|--|{ AUTHOR : "has_author"
+    ORDER ||--o{ ORDER_ITEM : "contains"
+    BOOK ||--o{ ORDER_ITEM : "included_in"
+    BOOK ||--o{ REVIEW : "has"
+```
