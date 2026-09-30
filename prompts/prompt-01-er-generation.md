@@ -38,7 +38,6 @@
 ---
 
 ## Перша відповідь AI
-
 ```
 erDiagram USER { UUID id PK string email string name string role }
 
@@ -158,4 +157,73 @@ erDiagram
     ORDER ||--o{ ORDER_ITEM : "contains"
     BOOK ||--o{ ORDER_ITEM : "included_in"
     BOOK ||--o{ REVIEW : "has"
+```
+## Prompt 3
+> Ооо, з типами тепер все чудово
+>
+> Хіба що, уточнення щодо назв зв'язків для точності:
+> 1. Зв'язок між BOOK та AUTHOR перейменуй з "has_author" на "written_by"
+> 2. Зв'язок між BOOK та REVIEW перейменуй з "has" на "receives"
+>
+> Видай остаточний Mermaid-код
+
+## Третя відповідь АІ
+```
+erDiagram
+    USER {
+        string id PK "UUID"
+        string email
+        string name
+        string role
+    }
+
+    AUTHOR {
+        string id PK "UUID"
+        string name
+        string bio
+    }
+
+    CATEGORY {
+        string id PK "UUID"
+        string name
+    }
+
+    BOOK {
+        string id PK "UUID"
+        string title
+        string isbn
+        number price
+        string category_id FK "UUID"
+    }
+
+    ORDER {
+        string id PK "UUID"
+        string user_id FK "UUID"
+        string status
+        number total_amount
+    }
+
+    ORDER_ITEM {
+        string id PK "UUID"
+        string order_id FK "UUID"
+        string book_id FK "UUID"
+        number quantity
+        number unit_price
+    }
+
+    REVIEW {
+        string id PK "UUID"
+        string user_id FK "UUID"
+        string book_id FK "UUID"
+        number rating
+        string comment
+    }
+
+    USER ||--o{ ORDER : "creates"
+    USER ||--o{ REVIEW : "leaves"
+    CATEGORY ||--o{ BOOK : "contains"
+    BOOK }|--|{ AUTHOR : "written_by"
+    ORDER ||--o{ ORDER_ITEM : "contains"
+    BOOK ||--o{ ORDER_ITEM : "included_in"
+    BOOK ||--o{ REVIEW : "receives"
 ```
