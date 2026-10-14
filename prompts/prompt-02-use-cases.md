@@ -127,3 +127,77 @@ PaymentGateway --> UC_Webhook : "Надсилання webhook (SUCCESS)"
 
 @enduml
 
+```
+
+## Промпт 2
+
+**Запит:**
+> Перероби це, бо вийшло занадто складно. Зроби таблицю трасування у вигляді нормальної компактної Markdown-таблиці з колонками Вимога ID, Опис, UC-1...UC-5 і Покриття. Прибери з таблиці колонки з User Story та Gherkin, вони тут зайві. Зроби людську нумерацію UC-1, UC-2, UC-3, UC-4, UC-5 замість випадкових. Зв'язки зроби чітко N:M, а REQ-6 залиш непокритою v1.0, як і було. У PlantUML коді прибери дублювання, зроби короткі назви usecase (UC-1...UC-5, UC-Auth, UC-Discount, REQ-6) і залиш тільки основні зв'язки: Guest до UC-1, Customer до UC-2..UC-5, Payment Gateway до UC-3, include для авторизації та extend для преміум-знижки
+
+---
+
+### Відповідь ШІ 2
+
+#### 1. Таблиця трасування вимог (EARS ↔ Use Cases)
+
+| Вимога ID | Опис вимоги | UC-1 | UC-2 | UC-3 | UC-4 | UC-5 | Покриття |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **REQ-1** | Авторизація для дій, що змінюють стан | | ✕ | ✕ | ✕ | ✕ | v1.0 |
+| **REQ-2** | Фіксація BOOK.price у ORDER_ITEM.unit_price | | ✕ | | | | v1.0 |
+| **REQ-3** | Перенаправлення на платіжний шлюз | | ✕ | ✕ | | | v1.0 |
+| **REQ-4** | Зміна статусу ORDER.status на PAID через webhook | | | ✕ | | | v1.0 |
+| **REQ-5** | Скасування замовлення у статусі PENDING | | | | ✕ | | v1.0 |
+| **REQ-6** | Автоматичний refund (повернення коштів) | | | | | | **v2.0 (Out of Scope)** |
+
+---
+
+#### 2. Код діаграми PlantUML (`use-case-diagram.puml`)
+
+```plantuml
+@startuml use-case-diagram
+left to right direction
+
+actor "User" as User << Abstract >>
+actor "Guest" as Guest
+actor "Customer" as Customer
+actor "Premium Customer" as PremiumCustomer
+actor "Payment Gateway" as PaymentGateway << External System >>
+
+User <|-- Guest
+User <|-- Customer
+Customer <|-- PremiumCustomer
+
+rectangle "Онлайн-магазин книг" {
+    usecase "UC-1: Перегляд каталогу та відгуків" as UC1
+    usecase "UC-2: Оформлення замовлення" as UC2
+    usecase "UC-3: Оплата замовлення та webhook" as UC3
+    usecase "UC-4: Скасування замовлення" as UC4
+    usecase "UC-5: Залишення відгуку" as UC5
+    usecase "UC-Auth: Авторизація" as UCAuth
+    usecase "UC-Discount: Преміум-знижка" as UCDiscount
+    usecase "REQ-6: Автоматичний refund (v2.0)" as REQ6
+}
+
+' Зв'язки акторів із Use Cases
+Guest --> UC1
+Customer --> UC2
+Customer --> UC3
+Customer --> UC4
+Customer --> UC5
+
+PaymentGateway --> UC3
+
+' Залежності include / extend
+UC2 .> UCAuth : <<include>>
+UC3 .> UCAuth : <<include>>
+UC4 .> UCAuth : <<include>>
+UC5 .> UCAuth : <<include>>
+
+UCDiscount .> UC2 : <<extend>>
+
+note right of REQ6
+  Непокрита вимога у v1.0
+  Обробка вручну
+end note
+
+@enduml

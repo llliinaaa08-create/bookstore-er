@@ -1,0 +1,47 @@
+@startuml use-case-diagram
+left to right direction
+
+actor "User" as User << Abstract >>
+actor "Guest" as Guest
+actor "Customer" as Customer
+actor "Premium Customer" as PremiumCustomer
+actor "Payment Gateway" as PaymentGateway << External System >>
+
+User <|-- Guest
+User <|-- Customer
+Customer <|-- PremiumCustomer
+
+rectangle "Онлайн-магазин книг" {
+    usecase "UC-1: Перегляд каталогу та відгуків" as UC1
+    usecase "UC-2: Оформлення замовлення" as UC2
+    usecase "UC-3: Оплата замовлення та webhook" as UC3
+    usecase "UC-4: Скасування замовлення" as UC4
+    usecase "UC-5: Залишення відгуку" as UC5
+    usecase "UC-Auth: Авторизація" as UCAuth
+    usecase "UC-Discount: Преміум-знижка" as UCDiscount
+    usecase "REQ-6: Автоматичний refund (v2.0)" as REQ6
+}
+
+' Зв'язки акторів із Use Cases
+Guest --> UC1
+Customer --> UC2
+Customer --> UC3
+Customer --> UC4
+Customer --> UC5
+
+PaymentGateway --> UC3
+
+' Залежності include / extend
+UC2 .> UCAuth : <<include>>
+UC3 .> UCAuth : <<include>>
+UC4 .> UCAuth : <<include>>
+UC5 .> UCAuth : <<include>>
+
+UCDiscount .> UC2 : <<extend>>
+
+note right of REQ6
+  Непокрита вимога у v1.0
+  Обробка вручну
+end note
+
+@enduml
