@@ -86,3 +86,52 @@ Scenario: Leave review
 ### Продуктивність
 * **NFR-7 (Швидкість):** Завантаження каталогу — до 2 сек при навантаженні до 500 юзерів
 * **NFR-8 (Доступність):** Uptime системи — не менше 99.5%
+
+---
+
+## 7. Сценарії взаємодії 
+
+- **Мета:** Описати покрокову взаємодію UI, сервісів і БД для 3 сценаріїв з Лаб 2 (оформлення, скасування, відгук) та обробку помилок у них
+
+### Учасники
+- **`Customer`** — покупець
+- **`Frontend`** — інтерфейс веб-сайту
+- **`OrderService`** — сервіс замовлень
+- **`ReviewService`** — сервіс відгуків
+- **`Database`** — БД (`USER`, `BOOK`, `ORDER`, `ORDER_ITEM`, `REVIEW`)
+- **`PaymentGateway`** — платіжний шлюз
+
+---
+
+### Сценарії
+
+### Сценарій 1: Оформлення та оплата (з Gherkin 1)
+1. `Customer` натискає «Оформити» -> `Frontend.submitOrder()`
+2. `Frontend` викликає `OrderService.createOrder()`
+3. `OrderService` бере з `Database` статус юзера (`getUserStatus`)
+4. **[opt]** Якщо юзер `Premium Customer` — рахується знижка `applyDiscount()`
+5. `OrderService` створює замовлення в `Database` зі статусом `PENDING` та фіксує `unit_price` у таблиці `ORDER_ITEM`
+6. `OrderService` відправляє запит у `PaymentGateway.processPayment()`
+7. **[alt]** Якщо шлюз повертає `SUCCESS` -> `Database` оновлює статус замовлення на `PAID`
+
+### Сценарій 2: Скасування замовлення (з Gherkin 2)
+1. `Customer` натискає «Скасувати» -> `Frontend.cancelOrder()`
+2. `Frontend` перенаправляє запит у `OrderService.requestCancellation()`
+3. `OrderService` перевіряє в `Database` поточний статус (`getOrderStatus`)
+4. **[alt]** Якщо статус `PENDING` -> `Database` змінює статус на `CANCELLED`
+5. **[alt]** Якщо статус не `PENDING` -> повертається помилка «Скасування неможливе»
+
+### Сценарій 3: Додавання відгуку (з Gherkin 3)
+1. `Customer` залишає оцінку й коментар -> `Frontend.submitReview()`
+2. `Frontend` передає дані в `ReviewService.addReview()`
+3. `ReviewService` робить запит до `Database` (`checkUserPurchasedBook`), чи купував юзер цю книгу
+4. **[alt]** Якщо книга купувалася -> `Database` зберігає новий запис у `REVIEW`
+5. **[alt]** Якщо не купувалася -> повертається помилка «Відгук може залишити лише покупець»
+
+---
+
+### Критерії прийняття
+1. **AC-1:** Сценарії 1:1 відповідають Gherkin-сценаріям з Розділу 4
+2. **AC-2:** Учасники збігаються з таблицями ERD (`USER`, `BOOK`, `ORDER`, `ORDER_ITEM`, `REVIEW`) та акторами Use Case
+3. **AC-3:** Виклики мають реалістичні назви (`createOrder()`, `requestCancellation()`, `addReview()`)
+4. **AC-4:** У кожному сценарії використовуються умовні блоки `alt` або `opt`
