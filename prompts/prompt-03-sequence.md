@@ -137,3 +137,138 @@ sequenceDiagram
 
 ## Зворотний зв'язок та корекція специфікації
 На основі цих помилок у розділ 7 файлу `spec.md` було додано додаткові критерії прийняття (**AC-5** та **AC-6**)
+
+## Вхідний промпт 2
+```
+Перероби ці діаграми з урахуванням доданих критеріїв прийняття які я кинула нижче, учасники й сценарії ті ж самі 
+
+5. **AC-5:** Обов'язкова наявність блоків `activate` / `deactivate` для відображення фокусу контролю
+6. **AC-6:** Сигнатури методів повинні використовувати суворий синтаксис (без пояснювального тексту мовою на зразок `unit_price in ORDER_ITEM`)
+```
+## Відповідь ШІ 2
+Ось оновлені Sequence-діаграми з урахуванням доданих критеріїв AC-5 (блоків activate / deactivate) та AC-6 (суворого синтаксису сигнатур методів):
+Сценарій 1: Оформлення та оплата
+Фрагмент коду
+
+sequenceDiagram
+    autonumber
+    actor Customer
+    participant Frontend
+    participant OrderService
+    participant Database
+    participant PaymentGateway
+
+    Customer->>Frontend: submitOrder(cartData)
+    activate Frontend
+    Frontend->>OrderService: createOrder(userId, cartItems)
+    activate OrderService
+
+    OrderService->>Database: getUserStatus(userId)
+    activate Database
+    Database-->>OrderService: userStatus
+    deactivate Database
+
+    opt userStatus == "PREMIUM"
+        OrderService->>OrderService: applyDiscount(cartItems)
+    end
+
+    OrderService->>Database: createOrder(userId, cartItems, "PENDING")
+    activate Database
+    Database-->>OrderService: orderId
+    deactivate Database
+
+    OrderService->>PaymentGateway: processPayment(orderId, totalAmount)
+    activate PaymentGateway
+    PaymentGateway-->>OrderService: paymentResult
+    deactivate PaymentGateway
+
+    alt paymentResult == "SUCCESS"
+        OrderService->>Database: updateOrderStatus(orderId, "PAID")
+        activate Database
+        Database-->>OrderService: success
+        deactivate Database
+        OrderService-->>Frontend: orderSuccessResponse
+        Frontend-->>Customer: displaySuccessMessage()
+    else paymentResult == "FAILED"
+        OrderService->>Database: updateOrderStatus(orderId, "PAYMENT_FAILED")
+        activate Database
+        Database-->>OrderService: success
+        deactivate Database
+        OrderService-->>Frontend: orderFailedResponse
+        Frontend-->>Customer: displayErrorMessage()
+    end
+
+    deactivate OrderService
+    deactivate Frontend
+Сценарій 2: Скасування замовлення
+Фрагмент коду
+
+sequenceDiagram
+    autonumber
+    actor Customer
+    participant Frontend
+    participant OrderService
+    participant Database
+
+    Customer->>Frontend: cancelOrder(orderId)
+    activate Frontend
+    Frontend->>OrderService: requestCancellation(orderId)
+    activate OrderService
+
+    OrderService->>Database: getOrderStatus(orderId)
+    activate Database
+    Database-->>OrderService: orderStatus
+    deactivate Database
+
+    alt orderStatus == "PENDING"
+        OrderService->>Database: updateOrderStatus(orderId, "CANCELLED")
+        activate Database
+        Database-->>OrderService: success
+        deactivate Database
+        OrderService-->>Frontend: cancellationSuccess
+        Frontend-->>Customer: displayCancellationSuccess()
+    else orderStatus != "PENDING"
+        OrderService-->>Frontend: cancellationError
+        Frontend-->>Customer: displayCancellationError()
+    end
+
+    deactivate OrderService
+    deactivate Frontend
+Сценарій 3: Додавання відгуку
+Фрагмент коду
+
+sequenceDiagram
+    autonumber
+    actor Customer
+    participant Frontend
+    participant ReviewService
+    participant Database
+
+    Customer->>Frontend: submitReview(bookId, rating, comment)
+    activate Frontend
+    Frontend->>ReviewService: addReview(userId, bookId, rating, comment)
+    activate ReviewService
+
+    ReviewService->>Database: checkUserPurchasedBook(userId, bookId)
+    activate Database
+    Database-->>ReviewService: isPurchased
+    deactivate Database
+
+    alt isPurchased == true
+        ReviewService->>Database: insertReview(userId, bookId, rating, comment)
+        activate Database
+        Database-->>ReviewService: reviewId
+        deactivate Database
+        ReviewService-->>Frontend: reviewSuccess
+        Frontend-->>Customer: displayReviewSuccess()
+    else isPurchased == false
+        ReviewService-->>Frontend: reviewError
+        Frontend-->>Customer: displayReviewError()
+    end
+
+    deactivate ReviewService
+    deactivate Frontend
+
+## Аудит повторної відповіді ШІ (Ітерація 2)
+
+ШІ додав `activate` та `deactivate` для кожного сервісу, тож лінії активності тепер відображаються суцільно й без розривів (AC-5). З дужок методів зник увесь зайвий текст, а замість нього з'явилися нормальні параметри на зразок `createOrder(userId, cartItems, "PENDING")` (AC-6). Згенеровані діаграми повністю покривають AC-1 - AC-6
