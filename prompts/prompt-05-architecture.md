@@ -144,3 +144,132 @@ IPaymentGateway -- PaymentGateway
 ```
 ## Аналіз відповіді ШІ
 ШІ нормально розкидав усе по 5 шарах і підказав, що я у спеці забула дописати зв'язки OrderService до UserRepository і BookRepository, а ReviewService до OrderRepository. Але в самій схемі він дописав зайвий webhook у платіжку, не додав актора покупця за межею системи, а через linetype ortho стрілки до бази злиплися. Тому я дописала всі залежності в spec.md і попросила поправити ці три моменти на діаграмі
+
+## Промт 2
+```
+Поправ у коді діаграми під оновлені критерії, прибери з `Payment Gateway` згадку про `webhook` (залиш тільки `processPayment()` по HTTPS / `NFR-2`), додай за межею системи актора `Customer / Premium Customer` зі зв'язком до `Frontend` і прибери `linetype ortho`, щоб лінії від репозиторіїв до `ISQLDataSource` не злипалися. Я оновила спек, ось ще два додані критерії
+- **AC-19:** На діаграмі враховані всі залежності сервісів від репозиторіїв: `OrderService` використовує `IUserRepository` і `IBookRepository`, а `ReviewService` — `IOrderRepository`
+- **AC-20:** За межею системи показаний актор користувача (`Customer / Premium Customer`), а з блоку `Payment Gateway` прибрані зайві деталі (`webhook`), яких не було в попередніх лабах
+```
+## Відповідь ШІ
+```
+@startuml component-diagram
+top to bottom direction
+skinparam componentStyle uml2
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+' --- Зовнішній актор за межею системи (AC-20) ---
+actor "Customer /\nPremium Customer" as Customer
+
+' --- Межа системи (v1.0) ---
+rectangle "Система: Онлайн-магазин книг (v1.0)" as SystemBoundary {
+
+    ' 1. Шар UI
+    package "1. UI Layer (Presentation)" as UILayer {
+        component "Frontend\n---\nКаталог, кошик,\nоформлення/скасування,\nвідгуки" as Frontend
+    }
+
+    interface "IStorefrontAPI" as IStorefrontAPI
+
+    ' 2. Шар API
+    package "2. API Layer" as APILayer {
+        component "API Gateway\n---\nМаршрутизація запитів,\nперевірка авторизації\n(REQ-1, NFR-3)" as APIGateway
+    }
+
+    interface "IAuthService" as IAuthService
+    interface "ICatalogService" as ICatalogService
+    interface "IOrderService" as IOrderService
+    interface "IReviewService" as IReviewService
+
+    ' 3. Шар бізнес-логіки (4 сервіси)
+    package "3. Service Layer (Business Logic)" as ServiceLayer {
+        component "AuthService\n---\n+ login()\n+ getUserStatus()\n+ hashPassword() [NFR-1]" as AuthService
+
+        component "CatalogService\n---\n+ getBooks() [UC-1]\n+ searchBooks()" as CatalogService
+
+        component "OrderService\n---\n+ createOrder() [UC-2]\n+ applyDiscount() [UC-Discount]\n+ processPayment() [UC-3]\n+ requestCancellation() [UC-4]" as OrderService
+
+        component "ReviewService\n---\n+ addReview() [UC-5]\n+ checkUserPurchasedBook()" as ReviewService
+    }
+
+    interface "IUserRepository" as IUserRepo
+    interface "IBookRepository" as IBookRepo
+    interface "IOrderRepository" as IOrderRepo
+    interface "IReviewRepository" as IReviewRepo
+
+    ' 4. Шар доступу до даних (Repositories)
+    package "4. Data Access Layer (Repositories)" as DALayer {
+        component "UserRepository\n---\nСутності: USER" as UserRepo
+
+        component "BookRepository\n---\nСутності: BOOK,\nAUTHOR, CATEGORY" as BookRepo
+
+        component "OrderRepository\n---\nСутності: ORDER, ORDER_ITEM\n(фіксація unit_price:\nREQ-2, NFR-4)" as OrderRepo
+
+        component "ReviewRepository\n---\nСутності: REVIEW" as ReviewRepo
+    }
+
+    interface "ISQLDataSource" as ISQLDataSource
+
+    ' 5. Шар бази даних
+    package "5. Database Layer" as DBLayer {
+        database "Database (3NF)\n---\nТаблиці (7):\nUSER, BOOK, AUTHOR, CATEGORY,\nORDER, ORDER_ITEM, REVIEW" as Database
+    }
+}
+
+' --- Зовнішній сервіс за межею системи (AC-17, AC-20) ---
+interface "IPaymentGateway" as IPaymentGateway
+component "Payment Gateway\n<<External System>>\n---\n+ processPayment()\n(HTTPS / NFR-2)" as PaymentGateway
+
+' --- Зв'язок користувача з UI ---
+Customer --> Frontend
+
+' --- Зв'язки UI <-> API ---
+Frontend --( IStorefrontAPI
+IStorefrontAPI -- APIGateway
+
+' --- Зв'язки API <-> Services ---
+APIGateway --( IAuthService
+IAuthService -- AuthService
+
+APIGateway --( ICatalogService
+ICatalogService -- CatalogService
+
+APIGateway --( IOrderService
+IOrderService -- OrderService
+
+APIGateway --( IReviewService
+IReviewService -- ReviewService
+
+' --- Зв'язки Services <-> Repositories (AC-19) ---
+AuthService --( IUserRepo
+OrderService --( IUserRepo
+IUserRepo -- UserRepo
+
+CatalogService --( IBookRepo
+OrderService --( IBookRepo
+IBookRepo -- BookRepo
+
+OrderService --( IOrderRepo
+ReviewService --( IOrderRepo
+IOrderRepo -- OrderRepo
+
+ReviewService --( IReviewRepo
+IReviewRepo -- ReviewRepo
+
+' --- Зв'язки Repositories <-> Database ---
+UserRepo --( ISQLDataSource
+BookRepo --( ISQLDataSource
+OrderRepo --( ISQLDataSource
+ReviewRepo --( ISQLDataSource
+ISQLDataSource -- Database
+
+' --- Зв'язок із зовнішнім платіжним шлюзом ---
+OrderService --( IPaymentGateway
+IPaymentGateway -- PaymentGateway
+
+@enduml
+```
+
+## Аналіз відповіді ШІ
+Цей варіант чистий і закриває всі критерії від AC-14 до AC-20, все що не потрібно було він прибрав, зв'язки на місці

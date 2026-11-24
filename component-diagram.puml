@@ -1,0 +1,116 @@
+@startuml component-diagram
+top to bottom direction
+skinparam componentStyle uml2
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+' --- Зовнішній актор за межею системи (AC-20) ---
+actor "Customer /\nPremium Customer" as Customer
+
+' --- Межа системи (v1.0) ---
+rectangle "Система: Онлайн-магазин книг (v1.0)" as SystemBoundary {
+
+    ' 1. Шар UI
+    package "1. UI Layer (Presentation)" as UILayer {
+        component "Frontend\n---\nКаталог, кошик,\nоформлення/скасування,\nвідгуки" as Frontend
+    }
+
+    interface "IStorefrontAPI" as IStorefrontAPI
+
+    ' 2. Шар API
+    package "2. API Layer" as APILayer {
+        component "API Gateway\n---\nМаршрутизація запитів,\nперевірка авторизації\n(REQ-1, NFR-3)" as APIGateway
+    }
+
+    interface "IAuthService" as IAuthService
+    interface "ICatalogService" as ICatalogService
+    interface "IOrderService" as IOrderService
+    interface "IReviewService" as IReviewService
+
+    ' 3. Шар бізнес-логіки (4 сервіси)
+    package "3. Service Layer (Business Logic)" as ServiceLayer {
+        component "AuthService\n---\n+ login()\n+ getUserStatus()\n+ hashPassword() [NFR-1]" as AuthService
+
+        component "CatalogService\n---\n+ getBooks() [UC-1]\n+ searchBooks()" as CatalogService
+
+        component "OrderService\n---\n+ createOrder() [UC-2]\n+ applyDiscount() [UC-Discount]\n+ processPayment() [UC-3]\n+ requestCancellation() [UC-4]" as OrderService
+
+        component "ReviewService\n---\n+ addReview() [UC-5]\n+ checkUserPurchasedBook()" as ReviewService
+    }
+
+    interface "IUserRepository" as IUserRepo
+    interface "IBookRepository" as IBookRepo
+    interface "IOrderRepository" as IOrderRepo
+    interface "IReviewRepository" as IReviewRepo
+
+    ' 4. Шар доступу до даних (Repositories)
+    package "4. Data Access Layer (Repositories)" as DALayer {
+        component "UserRepository\n---\nСутності: USER" as UserRepo
+
+        component "BookRepository\n---\nСутності: BOOK,\nAUTHOR, CATEGORY" as BookRepo
+
+        component "OrderRepository\n---\nСутності: ORDER, ORDER_ITEM\n(фіксація unit_price:\nREQ-2, NFR-4)" as OrderRepo
+
+        component "ReviewRepository\n---\nСутності: REVIEW" as ReviewRepo
+    }
+
+    interface "ISQLDataSource" as ISQLDataSource
+
+    ' 5. Шар бази даних
+    package "5. Database Layer" as DBLayer {
+        database "Database (3NF)\n---\nТаблиці (7):\nUSER, BOOK, AUTHOR, CATEGORY,\nORDER, ORDER_ITEM, REVIEW" as Database
+    }
+}
+
+' --- Зовнішній сервіс за межею системи (AC-17, AC-20) ---
+interface "IPaymentGateway" as IPaymentGateway
+component "Payment Gateway\n<<External System>>\n---\n+ processPayment()\n(HTTPS / NFR-2)" as PaymentGateway
+
+' --- Зв'язок користувача з UI ---
+Customer --> Frontend
+
+' --- Зв'язки UI <-> API ---
+Frontend --( IStorefrontAPI
+IStorefrontAPI -- APIGateway
+
+' --- Зв'язки API <-> Services ---
+APIGateway --( IAuthService
+IAuthService -- AuthService
+
+APIGateway --( ICatalogService
+ICatalogService -- CatalogService
+
+APIGateway --( IOrderService
+IOrderService -- OrderService
+
+APIGateway --( IReviewService
+IReviewService -- ReviewService
+
+' --- Зв'язки Services <-> Repositories (AC-19) ---
+AuthService --( IUserRepo
+OrderService --( IUserRepo
+IUserRepo -- UserRepo
+
+CatalogService --( IBookRepo
+OrderService --( IBookRepo
+IBookRepo -- BookRepo
+
+OrderService --( IOrderRepo
+ReviewService --( IOrderRepo
+IOrderRepo -- OrderRepo
+
+ReviewService --( IReviewRepo
+IReviewRepo -- ReviewRepo
+
+' --- Зв'язки Repositories <-> Database ---
+UserRepo --( ISQLDataSource
+BookRepo --( ISQLDataSource
+OrderRepo --( ISQLDataSource
+ReviewRepo --( ISQLDataSource
+ISQLDataSource -- Database
+
+' --- Зв'язок із зовнішнім платіжним шлюзом ---
+OrderService --( IPaymentGateway
+IPaymentGateway -- PaymentGateway
+
+@enduml

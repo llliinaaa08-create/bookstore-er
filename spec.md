@@ -111,3 +111,5 @@ Scenario: Leave review
 - **AC-16:** 4 сервіси покривають усі юзкейси `UC-1`–`UC-5`, а репозиторії працюють з усіма 7 таблицями ERD
 - **AC-17:** За межею системи тільки `Payment Gateway`, без зайвих сервісів, яких не було в Лаб 1–4
 - **AC-18:** Назви сервісів і методів (`createOrder`, `requestCancellation`, `addReview`, `processPayment`) збігаються зі Sequence та Activity
+- **AC-19:** На діаграмі враховані всі залежності сервісів від репозиторіїв: `OrderService` використовує `IUserRepository` і `IBookRepository`, а `ReviewService` — `IOrderRepository`
+- **AC-20:** За межею системи показаний актор користувача (`Customer / Premium Customer`), а з блоку `Payment Gateway` прибрані зайві деталі (`webhook`), яких не було в попередніх лабах
